@@ -42,6 +42,17 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = [var.http_ingress_cidr]
   }
 
+  dynamic "ingress" {
+    for_each = var.key_name != "" ? [1] : []
+
+    content {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = [var.ssh_ingress_cidr]
+    }
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -60,6 +71,7 @@ resource "aws_security_group" "app_sg" {
 resource "aws_instance" "app_server" {
   ami                         = local.selected_ami_id
   instance_type               = var.instance_type
+  key_name                    = var.key_name != "" ? var.key_name : null
   subnet_id                   = data.aws_subnets.default.ids[0]
   vpc_security_group_ids      = [aws_security_group.app_sg.id]
   associate_public_ip_address = true

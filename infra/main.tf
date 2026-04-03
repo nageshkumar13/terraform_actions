@@ -10,11 +10,13 @@ data "aws_subnets" "default" {
 }
 
 data "aws_ssm_parameter" "amazon_linux_2023_ami" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+  count = var.ami_id == "" ? 1 : 0
+  name  = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 }
 
 locals {
-  repo_root = "${path.module}/.."
+  repo_root       = "${path.module}/.."
+  selected_ami_id = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.amazon_linux_2023_ami[0].value
 
   tracked_app_files = sort(concat(
     tolist(fileset(local.repo_root, "app/**")),
@@ -56,7 +58,7 @@ resource "aws_security_group" "app_sg" {
 }
 
 resource "aws_instance" "app_server" {
-  ami                         = data.aws_ssm_parameter.amazon_linux_2023_ami.value
+  ami                         = local.selected_ami_id
   instance_type               = var.instance_type
   subnet_id                   = data.aws_subnets.default.ids[0]
   vpc_security_group_ids      = [aws_security_group.app_sg.id]
@@ -76,18 +78,6 @@ resource "aws_instance" "app_server" {
   tags = merge(
     {
       Name = var.instance_name
-    },
-    var.tags
-  )
-}
-
-resource "aws_eip" "app_server" {
-  domain   = "vpc"
-  instance = aws_instance.app_server.id
-
-  tags = merge(
-    {
-      Name = "${var.instance_name}-eip"
     },
     var.tags
   )

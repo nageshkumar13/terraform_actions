@@ -16,7 +16,7 @@ This repo provisions an EC2 instance with Terraform, clones this public reposito
 3. Terraform creates or updates an EC2 instance in the default VPC.
 4. EC2 `user_data` installs Docker and Git, clones this repo into `/opt/terraform_actions`, builds the Docker image, and starts the container.
 5. The app is exposed on port `80`, so the output URL is directly browser-friendly.
-6. An Elastic IP is attached so the public address stays stable across redeployments.
+6. The instance uses its default public IPv4 address, which keeps the setup simpler and avoids allocating a separate Elastic IP.
 
 The deployment intentionally hashes the app source, `Dockerfile`, and `requirements.txt`. When those files change, Terraform replaces the EC2 instance so the bootstrap script runs again from a clean machine.
 
@@ -32,6 +32,7 @@ Create these GitHub repository secrets:
 Create these GitHub repository variables:
 
 - `AWS_REGION`: for example `ap-south-1`
+- `TF_VAR_ami_id`: optional, set this to an AMI in your region if your IAM user cannot call `ssm:GetParameter`
 
 ## Manual destroy
 
@@ -43,3 +44,5 @@ Use the `Deploy EC2 App` workflow with `terraform_action=destroy` when you want 
 - The repository is cloned from its public HTTPS URL, so no SSH key is needed on the EC2 instance.
 - The FastAPI app returns JSON at `/` and a health response at `/health`.
 - The GitHub Actions cache approach is intentionally lightweight for learning and simple solo use. For team or production usage, a real remote backend is safer.
+- If you do not provide `TF_VAR_ami_id`, the Terraform code looks up the latest Amazon Linux 2023 AMI from SSM and therefore needs `ssm:GetParameter`.
+- Because no Elastic IP is allocated, the instance public IP can change when Terraform replaces the instance or if you stop and start it later.

@@ -46,3 +46,4 @@ Use the `Deploy EC2 App` workflow with `terraform_action=destroy` when you want 
 - The GitHub Actions cache approach is intentionally lightweight for learning and simple solo use. For team or production usage, a real remote backend is safer.
 - If you do not provide `TF_VAR_ami_id`, the Terraform code looks up the latest Amazon Linux 2023 AMI from SSM and therefore needs `ssm:GetParameter`.
 - Because no Elastic IP is allocated, the instance public IP can change when Terraform replaces the instance or if you stop and start it later.
+- The security group uses a generated AWS name with the configured prefix, which avoids duplicate-name failures if an older unmanaged security group is still present.

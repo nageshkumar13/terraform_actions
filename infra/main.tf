@@ -31,7 +31,7 @@ locals {
 }
 
 resource "aws_security_group" "app_sg" {
-  name        = var.security_group_name
+  name_prefix = "${var.security_group_name}-"
   description = "Allow browser access to the containerized FastAPI app"
   vpc_id      = data.aws_vpc.default.id
 

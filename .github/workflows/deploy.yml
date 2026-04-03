@@ -1,0 +1,113 @@
+name: Deploy EC2 App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - app/**
+      - infra/**
+      - Dockerfile
+      - requirements.txt
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: Apply creates or updates the EC2 app. Destroy tears it down.
+        required: true
+        default: apply
+        type: choice
+        options:
+          - apply
+          - destroy
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-actions-ec2
+      cancel-in-progress: false
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      TF_IN_AUTOMATION: true
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      TF_VAR_repo_branch: ${{ github.ref_name }}
+      TF_VAR_repo_url: https://github.com/${{ github.repository }}.git
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Restore Terraform state
+        id: restore-state
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            infra/terraform.tfstate
+            infra/terraform.tfstate.backup
+          key: terraform-state-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            terraform-state-${{ github.ref_name }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        if: github.event_name == 'push' || github.event.inputs.terraform_action == 'apply'
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        if: github.event_name == 'push' || github.event.inputs.terraform_action == 'apply'
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Share application URL
+        if: github.event_name == 'push' || github.event.inputs.terraform_action == 'apply'
+        run: |
+          APP_URL="$(terraform output -raw app_url)"
+          {
+            echo "## Deployment"
+            echo
+            echo "EC2 created or updated successfully."
+            echo
+            echo "Application URL: $APP_URL"
+            echo
+            echo "The instance still needs a minute or two to finish Docker install, git clone, image build, and container startup."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Terraform destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'destroy'
+        run: terraform destroy -input=false -auto-approve
+
+      - name: Save Terraform state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            infra/terraform.tfstate
+            infra/terraform.tfstate.backup
+          key: terraform-state-${{ github.ref_name }}-${{ github.run_id }}

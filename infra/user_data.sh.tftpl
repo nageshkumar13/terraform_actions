@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euxo pipefail
+
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+
+dnf update -y
+dnf install -y docker git
+
+systemctl enable docker
+systemctl start docker
+
+APP_DIRECTORY="${app_directory}"
+CONTAINER_NAME="${container_name}"
+CONTAINER_PORT="${container_port}"
+HOST_PORT="${host_port}"
+REPO_BRANCH="${repo_branch}"
+REPO_URL="${repo_url}"
+SOURCE_DIGEST="${source_digest}"
+
+echo "Deploying source digest: $${SOURCE_DIGEST}"
+
+rm -rf "$${APP_DIRECTORY}"
+git clone --branch "$${REPO_BRANCH}" "$${REPO_URL}" "$${APP_DIRECTORY}"
+
+cd "$${APP_DIRECTORY}"
+
+docker rm -f "$${CONTAINER_NAME}" || true
+docker build -t "$${CONTAINER_NAME}" .
+docker run -d \
+  --name "$${CONTAINER_NAME}" \
+  --restart unless-stopped \
+  -p "$${HOST_PORT}:$${CONTAINER_PORT}" \
+  "$${CONTAINER_NAME}"

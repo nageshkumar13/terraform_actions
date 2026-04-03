@@ -22,6 +22,12 @@ variable "instance_name" {
   default     = "terraform-actions-server"
 }
 
+variable "key_name" {
+  description = "Optional existing EC2 key pair name to attach for SSH access."
+  type        = string
+  default     = "red"
+}
+
 variable "security_group_name" {
   description = "Prefix used for the security group attached to the instance."
   type        = string
@@ -66,6 +72,12 @@ variable "host_port" {
 
 variable "http_ingress_cidr" {
   description = "CIDR range allowed to reach the application in the browser."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "ssh_ingress_cidr" {
+  description = "CIDR range allowed to SSH to the instance when key_name is set."
   type        = string
   default     = "0.0.0.0/0"
 }

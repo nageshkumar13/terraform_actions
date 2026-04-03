@@ -33,6 +33,8 @@ Create these GitHub repository variables:
 
 - `AWS_REGION`: for example `ap-south-1`
 - `TF_VAR_ami_id`: optional, set this to an AMI in your region if your IAM user cannot call `ssm:GetParameter`
+- `TF_VAR_key_name`: optional, existing EC2 key pair name to attach for SSH access; defaults to `red`
+- `TF_VAR_ssh_ingress_cidr`: optional, defaults to `0.0.0.0/0`; tighten this to your IP if you only want to SSH from one location
 
 ## Manual destroy
 
@@ -47,3 +49,5 @@ Use the `Deploy EC2 App` workflow with `terraform_action=destroy` when you want 
 - If you do not provide `TF_VAR_ami_id`, the Terraform code looks up the latest Amazon Linux 2023 AMI from SSM and therefore needs `ssm:GetParameter`.
 - Because no Elastic IP is allocated, the instance public IP can change when Terraform replaces the instance or if you stop and start it later.
 - The security group uses a generated AWS name with the configured prefix, which avoids duplicate-name failures if an older unmanaged security group is still present.
+- To SSH later, create or import the EC2 key pair in AWS first, then set `TF_VAR_key_name` to that key pair name. The local `.pem` file must match that AWS key pair.
+- HTTP browser access is already enabled on port `80` by the security group.

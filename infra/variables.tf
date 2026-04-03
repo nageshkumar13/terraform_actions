@@ -10,6 +10,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "ami_id" {
+  description = "Optional AMI ID override. When set, Terraform skips the SSM parameter lookup and uses this AMI directly."
+  type        = string
+  default     = ""
+}
+
 variable "instance_name" {
   description = "Name tag applied to the EC2 instance."
   type        = string

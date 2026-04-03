@@ -23,7 +23,7 @@ variable "instance_name" {
 }
 
 variable "security_group_name" {
-  description = "Name of the security group attached to the instance."
+  description = "Prefix used for the security group attached to the instance."
   type        = string
   default     = "terraform-actions-sg"
 }
